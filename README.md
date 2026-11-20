@@ -6,7 +6,7 @@ Update the Kirby core of a manually installed (non-Composer) Kirby 5 site to the
 
 ## Installation
 
-Download and copy this repository to `site/plugins/kirby-updater`, or install it with Composer:
+Download the [latest release](https://github.com/devmount/kirby-updater/releases/latest), extract it to `site/plugins/kirby-updater` (replace the folder when updating), or install it with Composer:
 
 ```bash
 composer require devmount/kirby-updater
