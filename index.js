@@ -49,6 +49,14 @@ panel.plugin("devmount/kirby-updater", {
 					}));
 				}
 			},
+			mounted() {
+				const message = sessionStorage.getItem("kirby-updater");
+
+				if (message) {
+					sessionStorage.removeItem("kirby-updater");
+					this.$panel.notification.success(message);
+				}
+			},
 			methods: {
 				confirm(text, button, endpoint) {
 					this.$panel.dialog.open({
@@ -82,8 +90,9 @@ panel.plugin("devmount/kirby-updater", {
 
 					try {
 						const result = await this.$api.post(endpoint);
-						this.$panel.notification.success(`Kirby is now on version ${result.newVersion}`);
-						// reload to load the Panel assets of the new version
+						// reload to load the Panel assets of the new version,
+						// the message is shown after the reload (see mounted)
+						sessionStorage.setItem("kirby-updater", `Kirby is now on version ${result.newVersion}`);
 						window.location.reload();
 					} catch (error) {
 						this.$panel.notification.error(error);
