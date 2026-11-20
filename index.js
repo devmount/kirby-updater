@@ -67,10 +67,10 @@ panel.plugin("devmount/kirby-updater", {
 				},
 				backupLabel() {
 					if (this.backups.length > 1) {
-						return `${this.backups.length} backups (newest: ${this.latestBackup.version})`;
+						return `${this.backups.length} core backups (newest: ${this.latestBackup.version})`;
 					}
 
-					return this.latestBackup ? `Backup of ${this.latestBackup.version}` : "No backup";
+					return this.latestBackup ? `Core backup of ${this.latestBackup.version}` : "No backup";
 				},
 				// same item style as the security section of the system view
 				issueItems() {
@@ -126,7 +126,7 @@ panel.plugin("devmount/kirby-updater", {
 				},
 				update() {
 					this.confirm(
-						`Update Kirby from <strong>${this.currentVersion}</strong> to <strong>${this.targetVersion}</strong>? A backup of the current kirby folder will be kept.`,
+						`Update Kirby from <strong>${this.currentVersion}</strong> to <strong>${this.targetVersion}</strong>? A backup of the current kirby folder will be kept. Your content, site folder and plugins are not touched or backed up by the update.`,
 						{ text: "Update", icon: "refresh", theme: "positive" },
 						"updater/update"
 					);
