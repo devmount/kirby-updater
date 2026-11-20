@@ -1,0 +1,3 @@
+# keep repository-only files out of downloads and Composer installs
+/.github export-ignore
+/.gitattributes export-ignore

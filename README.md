@@ -2,6 +2,8 @@
 
 Update the Kirby core of a manually installed (non-Composer) Kirby 5 site to the latest patch or minor release, right from the Panel.
 
+![Kirby Updater](.github/screenshot.png)
+
 ## How it works
 
 1. Admins get an **Updater** entry in the Panel menu showing the installed and the latest available version of the current major release, plus known security issues.
