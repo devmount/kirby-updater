@@ -10,7 +10,7 @@ Update the Kirby core of a manually installed (non-Composer) Kirby 5 site to the
 4. If anything fails after the swap, the backup is moved back automatically.
 5. The latest backup can be restored manually from the Updater view. This deletes the current `kirby/` folder without a backup.
 
-Only the `kirby/` folder (the Kirby core) is backed up and replaced. Content, the `site/` folder (including plugins and accounts) and `media/` are neither touched nor backed up, so keep your regular site backups.
+**Only the `kirby/` folder (the Kirby core) is backed up and replaced. Content, the `site/` folder (including plugins and accounts) and `media/` are neither touched nor backed up, so keep your regular site backups.**
 
 Backups and temporary files are kept in `site/kirby-updater/`, which Kirby's server configs block from web access, so the old (possibly vulnerable) core is never publicly reachable. Add this folder to your `.gitignore`.
 
@@ -49,3 +49,7 @@ return [
 - Plugins may be incompatible with a new minor release. Use "Restore backup" in that case.
 - Any changes made inside the `kirby/` folder are replaced by the update. They only survive in the backup until the next update removes it.
 - GitHub archives have no published checksums, so the download is validated by structure and version only.
+
+## License
+
+This plugin is licensed under the [MIT License](LICENSE).
