@@ -5,9 +5,8 @@ panel.plugin("devmount/kirby-updater", {
 				currentVersion: String,
 				targetVersion: String,
 				canUpdate: Boolean,
-				blockers: Array,
+				issues: Array,
 				changelog: String,
-				vulnerabilities: Array,
 				backups: Array
 			},
 			data() {
@@ -35,12 +34,22 @@ panel.plugin("devmount/kirby-updater", {
 				},
 				latestBackup() {
 					return this.backups[0];
+				},
+				// same item style as the security section of the system view
+				issueItems() {
+					return this.issues.map((issue) => ({
+						theme: "negative",
+						image: {
+							back: "light-dark(var(--theme-color-200), var(--theme-color-900))",
+							icon: issue.icon ?? "alert",
+							color: "var(--theme-color-icon)"
+						},
+						target: "_blank",
+						...issue
+					}));
 				}
 			},
 			methods: {
-				vulnerabilityText(vulnerability) {
-					return `<strong>Security issue (${vulnerability.severity}):</strong> ${vulnerability.description} <a href="${vulnerability.link}" target="_blank">Details</a>`;
-				},
 				confirm(text, button, endpoint) {
 					this.$panel.dialog.open({
 						component: "k-text-dialog",
@@ -88,24 +97,9 @@ panel.plugin("devmount/kirby-updater", {
 
 					<k-stats :reports="reports" size="large" />
 
-					<k-box
-						v-for="vulnerability in vulnerabilities"
-						:key="vulnerability.link"
-						:html="true"
-						:text="vulnerabilityText(vulnerability)"
-						theme="negative"
-						icon="alert"
-						class="k-updater-box"
-					/>
-
-					<k-box
-						v-for="blocker in blockers"
-						:key="blocker"
-						:text="blocker"
-						theme="notice"
-						icon="alert"
-						class="k-updater-box"
-					/>
+					<k-section v-if="issues.length" headline="Issues" class="k-updater-issues">
+						<k-items :items="issueItems" />
+					</k-section>
 
 					<k-button-group class="k-updater-buttons">
 						<k-button

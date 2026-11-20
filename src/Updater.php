@@ -56,14 +56,23 @@ class Updater
 			$blockers = [$e->getMessage()];
 		}
 
+		// same items as in the security section of the system view
+		$issues = [
+			...$this->kirby->system()->updateStatus()?->messages() ?? [],
+			...array_map(fn ($blocker) => [
+				'text'  => $blocker,
+				'icon'  => 'alert',
+				'theme' => 'notice',
+			], $blockers),
+		];
+
 		return [
-			'currentVersion'  => $this->kirby->version(),
-			'targetVersion'   => $target,
-			'canUpdate'       => $target !== null && $blockers === [],
-			'blockers'        => $blockers,
-			'changelog'       => $target ? 'https://getkirby.com/releases/' . $target : null,
-			'vulnerabilities' => $this->kirby->system()->updateStatus()?->vulnerabilities() ?? [],
-			'backups'         => $this->backups(),
+			'currentVersion' => $this->kirby->version(),
+			'targetVersion'  => $target,
+			'canUpdate'      => $target !== null && $blockers === [],
+			'issues'         => $issues,
+			'changelog'      => $target ? 'https://getkirby.com/releases/' . $target : null,
+			'backups'        => $this->backups(),
 		];
 	}
 
