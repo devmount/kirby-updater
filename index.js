@@ -95,6 +95,23 @@ panel.plugin("devmount/kirby-updater", {
 				}
 			},
 			methods: {
+				// same as the copy button of the system view
+				copy() {
+					const info = JSON.stringify(
+						{
+							installed: this.currentVersion,
+							available: this.targetVersion,
+							support: this.support,
+							backups: this.backups.map((backup) => backup.version),
+							issues: this.issues.map((issue) => issue.text)
+						},
+						null,
+						2
+					);
+
+					this.$helper.clipboard.write(info);
+					this.$panel.notification.success({ message: this.$t("system.info.copied") });
+				},
 				confirm(text, button, endpoint) {
 					this.$panel.dialog.open({
 						component: "k-text-dialog",
@@ -141,9 +158,14 @@ panel.plugin("devmount/kirby-updater", {
 				<k-panel-inside class="k-updater-view">
 					<k-header>Kirby Updater</k-header>
 
-					<k-stats :reports="reports" size="large" />
+					<k-section
+						headline="Status"
+						:buttons="[{ text: $t('system.info.copy'), icon: 'copy', responsive: true, click: copy }]"
+					>
+						<k-stats :reports="reports" size="medium" />
+					</k-section>
 
-					<k-section v-if="issues.length" headline="Issues" class="k-updater-issues">
+					<k-section v-if="issues.length" headline="Issues">
 						<k-items :items="issueItems" />
 					</k-section>
 
