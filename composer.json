@@ -1,0 +1,18 @@
+{
+  "name": "devmount/kirby-updater",
+  "description": "Update the Kirby core to the latest patch or minor release from the Panel",
+  "type": "kirby-plugin",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Andreas Müller",
+      "email": "mail@devmount.de"
+    }
+  ],
+  "require": {
+    "getkirby/composer-installer": "^1.2"
+  },
+  "extra": {
+    "installer-name": "kirby-updater"
+  }
+}
