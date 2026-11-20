@@ -4,12 +4,26 @@ Update the Kirby core of a manually installed (non-Composer) Kirby 5 site to the
 
 ![Kirby Updater](.github/screenshot.png)
 
+## Installation
+
+Download and copy this repository to `site/plugins/kirby-updater`, or install it with Composer:
+
+```bash
+composer require devmount/kirby-updater
+```
+
+## The Updater view
+
+Admins get an **Updater** entry in the Panel menu. Other users see neither the menu entry nor the view, and the update API is restricted to admins.
+
+The view shows the installed and latest version, the support status of the current major version and the latest backup, plus the known security issues and anything preventing an update.
+
 ## How it works
 
-1. Admins get an **Updater** entry in the Panel menu showing the installed and the latest available version of the current major release, plus known security issues.
-2. On update, the release archive is downloaded from GitHub, extracted into `site/kirby-updater/tmp/` and validated (required files, version, PHP requirement).
-3. Only then is the current `kirby/` folder moved to `site/kirby-updater/backup-<timestamp>-<version>/` and the new folder moved in place.
-4. If anything fails after the swap, the backup is moved back automatically.
+1. On update, the release archive is downloaded from GitHub, extracted into `site/kirby-updater/tmp/` and validated (required files, version, PHP requirement).
+2. Only then is the current `kirby/` folder moved to `site/kirby-updater/backup-<timestamp>-<version>/` and the new folder moved in place.
+3. If anything fails after the swap, the backup is moved back automatically.
+4. After a successful update, the Panel reloads with the new version and confirms the update. Older backups are removed, keeping as many as set by the `backups` option.
 5. The latest backup can be restored manually from the Updater view. This deletes the current `kirby/` folder without a backup.
 
 **Only the `kirby/` folder (the Kirby core) is backed up and replaced. Content, the `site/` folder (including plugins and accounts) and `media/` are neither touched nor backed up, so keep your regular site backups.**
@@ -35,7 +49,7 @@ Major upgrades are never offered and stay a manual task. The update is refused f
 // site/config/config.php
 return [
   'devmount.kirby-updater' => [
-    // number of kirby folder backups to keep
+    // number of kirby folder backups to keep (at least 1)
     'backups'    => 1,
     // false only allows patch updates
     'allowMinor' => true,
@@ -50,6 +64,7 @@ return [
 
 - Plugins may be incompatible with a new minor release. Use "Restore backup" in that case.
 - Any changes made inside the `kirby/` folder are replaced by the update. They only survive in the backup until the next update removes it.
+- getkirby.com only publishes the latest release per major version. With `allowMinor` set to `false`, no update is offered at all once a newer minor release exists, even if there are newer patch releases of your minor version.
 - GitHub archives have no published checksums, so the download is validated by structure and version only.
 
 ## License
