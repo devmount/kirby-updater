@@ -2,6 +2,7 @@
 
 namespace Devmount\KirbyUpdater;
 
+use Composer\InstalledVersions;
 use Composer\Semver\Semver;
 use Kirby\Cms\App;
 use Kirby\Exception\Exception;
@@ -25,9 +26,7 @@ class Updater
 	/** @var resource|null */
 	protected $lock = null;
 
-	public function __construct(protected App $kirby)
-	{
-	}
+	public function __construct(protected App $kirby) {}
 
 	/**
 	 * Creates an updater instance, only for admins
@@ -100,18 +99,35 @@ class Updater
 	{
 		$root     = $this->root();
 		$parent   = dirname($root);
+		$site     = $this->kirby->root('site');
+		$index    = $this->kirby->root('index');
 		$blockers = [];
 
 		if ($this->isComposerInstall() === true) {
 			$blockers[] = 'Kirby is managed by Composer. Please run `composer update getkirby/cms` instead.';
 		}
 
+		// Kirby resolves its root, so a symlinked kirby folder
+		// would update the shared target for all sites using it
+		if (is_link($index . '/kirby') === true || is_link(dirname($index) . '/kirby') === true) {
+			$blockers[] = 'The kirby folder is a symlink, possibly shared with other sites. Please update it manually.';
+		}
+
+		if (file_exists($root . '/.git') === true) {
+			$blockers[] = 'The kirby folder is a git repository or submodule. Please update it with git instead.';
+		}
+
 		if (class_exists('ZipArchive') === false) {
 			$blockers[] = 'The PHP zip extension (ZipArchive) is not available.';
 		}
 
-		if (is_writable($parent) === false || is_writable($root) === false) {
-			$blockers[] = 'The kirby folder or its parent folder is not writable by the web server.';
+		if (is_writable($parent) === false || is_writable($root) === false || is_writable($site) === false) {
+			$blockers[] = 'The kirby folder, its parent folder or the site folder is not writable by the web server.';
+		}
+
+		// folders can only be moved without copying on the same filesystem
+		if ((@stat($parent)['dev'] ?? null) !== (@stat($site)['dev'] ?? null)) {
+			$blockers[] = 'The kirby folder and the site folder are on different filesystems.';
 		}
 
 		if (
@@ -122,7 +138,7 @@ class Updater
 			$blockers[] = 'Minor updates are disabled by the `devmount.kirby-updater.allowMinor` option.';
 		}
 
-		$free = @disk_free_space($parent);
+		$free = @disk_free_space($site);
 		$size = Dir::size($root);
 
 		if ($free !== false && $size !== false && $free < 3 * $size) {
@@ -138,6 +154,7 @@ class Updater
 	 */
 	public function update(): array
 	{
+		$this->prepareRequest();
 		$this->acquireLock();
 
 		// load classes possibly needed after the swap from the old folder
@@ -145,7 +162,9 @@ class Updater
 
 		$root    = $this->root();
 		$current = $this->kirby->version();
-		$tmp     = $root . '.updater-tmp';
+		$tmp     = $this->dir() . '/tmp';
+		$new     = $tmp . '/kirby';
+		$backup  = $this->dir() . '/backup-' . date('YmdHis') . '-' . $current;
 		$swapped = false;
 
 		try {
@@ -154,9 +173,6 @@ class Updater
 			if (($blockers = $this->blockers($target)) !== []) {
 				throw new Exception(message: implode(' ', $blockers));
 			}
-
-			$new    = $tmp . '/kirby';
-			$backup = $root . '.backup-' . date('YmdHis') . '-' . $current;
 
 			Dir::remove($tmp);
 			Dir::make($tmp);
@@ -185,7 +201,13 @@ class Updater
 					Dir::remove($root);
 				}
 
-				rename($backup, $root);
+				if (rename($backup, $root) === false) {
+					throw new Exception(
+						message: 'The update failed and the backup could not be restored. Please move ' . $backup . ' to ' . $root . ' manually: ' . $e->getMessage(),
+						previous: $e
+					);
+				}
+
 				$this->resetOpcache();
 			}
 
@@ -212,15 +234,16 @@ class Updater
 	 */
 	public function rollback(): array
 	{
+		$this->prepareRequest();
 		$this->acquireLock();
 
 		$root    = $this->root();
 		$current = $this->kirby->version();
-		$trash   = $root . '.updater-trash';
+		$trash   = $this->dir() . '/trash';
 
 		try {
 			$backup = $this->backups()[0] ?? throw new Exception(message: 'There is no backup to restore');
-			$path   = dirname($root) . '/' . $backup['name'];
+			$path   = $this->dir() . '/' . $backup['name'];
 
 			Dir::remove($trash);
 
@@ -250,7 +273,8 @@ class Updater
 	 */
 	public function backups(): array
 	{
-		$dirs = glob($this->root() . '.backup-*', GLOB_ONLYDIR) ?: [];
+		// only folders created by the updater: backup-<YmdHis>-<version>
+		$dirs = preg_grep('/\/backup-\d{14}-[^\/]+$/', glob($this->dir() . '/backup-*', GLOB_ONLYDIR) ?: []);
 		rsort($dirs);
 
 		return array_map(fn ($dir) => [
@@ -331,18 +355,21 @@ class Updater
 		$keep = max(1, (int)$this->option('backups'));
 
 		foreach (array_slice($this->backups(), $keep) as $backup) {
-			Dir::remove(dirname($this->root()) . '/' . $backup['name']);
+			Dir::remove($this->dir() . '/' . $backup['name']);
 		}
 	}
 
+	/**
+	 * Checks if a Composer project (other than Kirby's own
+	 * bundled dependencies) has installed getkirby/cms
+	 */
 	protected function isComposerInstall(): bool
 	{
-		$base = dirname($this->root());
-
-		// the root composer.json is not checked, since starterkit
-		// and plainkit ship one that requires getkirby/cms
-		foreach (['/vendor/composer/installed.json', '/composer.lock'] as $file) {
-			if (str_contains(F::read($base . $file) ?: '', '"getkirby/cms"') === true) {
+		foreach (InstalledVersions::getAllRawData() as $data) {
+			if (
+				($data['root']['name'] ?? null) !== 'getkirby/cms' &&
+				isset($data['versions']['getkirby/cms']) === true
+			) {
 				return true;
 			}
 		}
@@ -350,12 +377,21 @@ class Updater
 		return false;
 	}
 
+	/**
+	 * Lets the update finish even if the request
+	 * takes long or the Panel is closed meanwhile
+	 */
+	protected function prepareRequest(): void
+	{
+		@set_time_limit(0);
+		ignore_user_abort(true);
+	}
+
 	protected function acquireLock(): void
 	{
-		$file = $this->kirby->root('cache') . '/kirby-updater.lock';
-		Dir::make(dirname($file));
+		Dir::make($this->dir());
 
-		$this->lock = fopen($file, 'c');
+		$this->lock = fopen($this->dir() . '/.lock', 'c');
 
 		if ($this->lock === false || flock($this->lock, LOCK_EX | LOCK_NB) === false) {
 			throw new Exception(message: 'Another update is already running');
@@ -409,6 +445,15 @@ class Updater
 	protected function option(string $key): mixed
 	{
 		return $this->kirby->option('devmount.kirby-updater.' . $key);
+	}
+
+	/**
+	 * Working folder for backups and temporary files; inside `site/`,
+	 * since that is blocked from web access by Kirby's server configs
+	 */
+	protected function dir(): string
+	{
+		return $this->kirby->root('site') . '/kirby-updater';
 	}
 
 	protected function root(): string

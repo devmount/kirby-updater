@@ -71,7 +71,7 @@ panel.plugin("devmount/kirby-updater", {
 				},
 				rollback() {
 					this.confirm(
-						`Restore the backup <strong>${this.latestBackup.name}</strong> (Kirby ${this.latestBackup.version})? The current kirby folder will be removed.`,
+						`Restore the backup <strong>${this.latestBackup.name}</strong> (Kirby ${this.latestBackup.version})? The current kirby folder (Kirby ${this.currentVersion}) will be deleted without a backup.`,
 						{ text: "Restore", icon: "undo", theme: "negative" },
 						"updater/rollback"
 					);
