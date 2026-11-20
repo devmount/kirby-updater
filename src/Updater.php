@@ -65,13 +65,30 @@ class Updater
 			], $blockers),
 		];
 
+		// support status of the current major version,
+		// only available if the update data could be loaded
+		$major   = explode('.', $this->kirby->version())[0];
+		$support = $this->data['versions'][$major . '.*'] ?? null;
+
+		$backups = $this->backups();
+		$size    = array_sum(array_map(
+			fn ($backup) => Dir::size($this->dir() . '/' . $backup['name']) ?: 0,
+			$backups
+		));
+
 		return [
 			'currentVersion' => $this->kirby->version(),
 			'targetVersion'  => $target,
 			'canUpdate'      => $target !== null && $blockers === [],
 			'issues'         => $issues,
 			'changelog'      => $target ? 'https://getkirby.com/releases/' . $target : null,
-			'backups'        => $this->backups(),
+			'backups'        => $backups,
+			'backupSize'     => F::niceSize($size),
+			'support'        => $support ? [
+				'major'     => $major,
+				'status'    => $support['status'] ?? null,
+				'endOfLife' => $support['endOfLife'] ?? null,
+			] : null,
 		];
 	}
 

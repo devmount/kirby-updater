@@ -7,7 +7,9 @@ panel.plugin("devmount/kirby-updater", {
 				canUpdate: Boolean,
 				issues: Array,
 				changelog: String,
-				backups: Array
+				backups: Array,
+				backupSize: String,
+				support: Object
 			},
 			data() {
 				return {
@@ -23,17 +25,52 @@ panel.plugin("devmount/kirby-updater", {
 							icon: "box"
 						},
 						{
-							label: "Available",
+							label: this.targetVersion ? "Update available" : "Up to date",
 							value: this.targetVersion ?? this.currentVersion,
-							info: this.targetVersion ? "Update available" : "Up to date",
 							theme: this.targetVersion ? "info" : "positive",
 							icon: this.targetVersion ? "download" : "check",
 							link: this.changelog
+						},
+						...(this.supportReport ? [this.supportReport] : []),
+						{
+							label: this.backupLabel,
+							value: this.latestBackup ? this.backupSize : "–",
+							icon: "archive"
 						}
 					];
 				},
+				supportReport() {
+					if (!this.support) {
+						return null;
+					}
+
+					const statuses = {
+						"active-support": { text: "active support", theme: "positive" },
+						"security-support": { text: "security fixes only", theme: "notice" },
+						"end-of-life": { text: "end of life", theme: "negative" }
+					};
+					const status = statuses[this.support.status] ?? { text: this.support.status };
+					const date = this.support.endOfLife
+						? new Date(this.support.endOfLife).toLocaleDateString(this.$panel.translation.code, { month: "short", year: "numeric" })
+						: null;
+
+					return {
+						label: `Kirby ${this.support.major} – ${status.text}`,
+						value: date ? (this.support.status === "end-of-life" ? `since ${date}` : date) : "–",
+						theme: status.theme,
+						icon: "shield",
+						link: "https://getkirby.com/security"
+					};
+				},
 				latestBackup() {
 					return this.backups[0];
+				},
+				backupLabel() {
+					if (this.backups.length > 1) {
+						return `${this.backups.length} backups (newest: ${this.latestBackup.version})`;
+					}
+
+					return this.latestBackup ? `Backup of ${this.latestBackup.version}` : "No backup";
 				},
 				// same item style as the security section of the system view
 				issueItems() {
