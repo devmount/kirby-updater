@@ -1,3 +1,9 @@
 # keep repository-only files out of downloads and Composer installs
 /.github export-ignore
 /.gitattributes export-ignore
+/.gitignore export-ignore
+/package.json export-ignore
+/pnpm-lock.yaml export-ignore
+/pnpm-workspace.yaml export-ignore
+/src/index.js export-ignore
+/src/components export-ignore

@@ -66,6 +66,18 @@ return [
 - Any changes made inside the `kirby/` folder are replaced by the update. They only survive in the backup until the next update removes it.
 - GitHub archives have no published checksums, so the download is validated by structure and version only.
 
+## Development
+
+The Panel view is built with [kirbyup](https://github.com/johannschopplich/kirbyup), so it works without Kirby's Vue template compiler:
+
+```bash
+pnpm install
+pnpm dev       # development build with hot module replacement
+pnpm build     # production build to index.js and index.css
+```
+
+Commit the built `index.js` and `index.css` with your changes.
+
 ## License
 
 This plugin is licensed under the [MIT License](LICENSE).

@@ -1,8 +1,1 @@
-.k-updater-buttons {
-	margin-top: var(--spacing-6);
-}
-
-/* colored labels like in the system view */
-.k-updater-view .k-stat-label {
-	color: var(--theme-color-text, currentColor);
-}
+.k-updater-buttons{margin-top:var(--spacing-6)}.k-updater-view .k-stat-label{color:var(--theme-color-text, currentColor)}
