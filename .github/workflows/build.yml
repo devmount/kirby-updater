@@ -1,0 +1,22 @@
+# fails if the committed index.js/index.css don't match a fresh build,
+# e.g. when a change to the Vue source was committed without rebuilding
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Check that the build output is committed
+        run: git diff --exit-code index.js index.css || (echo "::error::index.js or index.css is outdated, run 'pnpm build' and commit the result" && exit 1)
