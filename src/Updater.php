@@ -19,6 +19,7 @@ use Throwable;
 class Updater
 {
 	public const DATA_URL     = 'https://getkirby.com/security.json';
+	public const RELEASES_URL = 'https://getkirby.com/releases.json';
 	public const DOWNLOAD_URL = 'https://github.com/getkirby/kirby/archive/refs/tags/{version}.zip';
 
 	protected array|null $data = null;
@@ -49,7 +50,7 @@ class Updater
 	{
 		try {
 			$target   = $this->targetVersion();
-			$blockers = $this->blockers($target);
+			$blockers = $this->blockers();
 		} catch (Throwable $e) {
 			$target   = null;
 			$blockers = [$e->getMessage()];
@@ -93,7 +94,8 @@ class Updater
 	}
 
 	/**
-	 * Latest release of the current major version,
+	 * Latest release of the current major version (or of the current
+	 * minor version, if minor updates are disabled),
 	 * `null` if the installation is up to date
 	 */
 	public function targetVersion(): string|null
@@ -101,6 +103,10 @@ class Updater
 		$current = $this->kirby->version();
 		$major   = explode('.', $current)[0];
 		$latest  = $this->data()['versions'][$major . '.*']['latest'] ?? null;
+
+		if ($this->option('allowMinor') === false) {
+			$latest = $this->latestPatch($current);
+		}
 
 		if (is_string($latest) === false || version_compare($latest, $current, '<=') === true) {
 			return null;
@@ -112,7 +118,7 @@ class Updater
 	/**
 	 * Reasons that prevent an update
 	 */
-	public function blockers(string|null $target = null): array
+	public function blockers(): array
 	{
 		$root     = $this->root();
 		$parent   = dirname($root);
@@ -147,14 +153,6 @@ class Updater
 			$blockers[] = 'The kirby folder and the site folder are on different filesystems.';
 		}
 
-		if (
-			$target !== null &&
-			$this->option('allowMinor') === false &&
-			$this->minor($target) !== $this->minor($this->kirby->version())
-		) {
-			$blockers[] = 'Minor updates are disabled by the `devmount.kirby-updater.allowMinor` option.';
-		}
-
 		$free = @disk_free_space($site);
 		$size = Dir::size($root);
 
@@ -187,7 +185,7 @@ class Updater
 		try {
 			$target = $this->targetVersion() ?? throw new Exception(message: 'Kirby is already up to date');
 
-			if (($blockers = $this->blockers($target)) !== []) {
+			if (($blockers = $this->blockers()) !== []) {
 				throw new Exception(message: implode(' ', $blockers));
 			}
 
@@ -446,6 +444,25 @@ class Updater
 		}
 
 		return $this->data = $data;
+	}
+
+	/**
+	 * Latest release of the given minor version,
+	 * based on the list of all Kirby releases
+	 */
+	protected function latestPatch(string $version): string|null
+	{
+		$response = Remote::get(static::RELEASES_URL, ['timeout' => 10]);
+		$versions = $response->code() === 200 ? $response->json()['versions'] ?? null : null;
+
+		if (is_array($versions) === false) {
+			throw new Exception(message: 'Could not load the release list from getkirby.com');
+		}
+
+		$patches = array_filter($versions, fn ($release) => $this->minor($release) === $this->minor($version));
+		usort($patches, 'version_compare');
+
+		return end($patches) ?: null;
 	}
 
 	protected function versionOf(string $dir): string|null

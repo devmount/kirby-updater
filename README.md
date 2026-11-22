@@ -51,7 +51,7 @@ return [
   'devmount.kirby-updater' => [
     // number of kirby folder backups to keep (at least 1)
     'backups'    => 1,
-    // false only allows patch updates
+    // false only allows patch updates of the installed minor version
     'allowMinor' => true,
     // false, true (requests the Panel login page) or a URL
     // that is requested after the swap, rolling back on a 5xx response
@@ -64,7 +64,6 @@ return [
 
 - Plugins may be incompatible with a new minor release. Use "Restore backup" in that case.
 - Any changes made inside the `kirby/` folder are replaced by the update. They only survive in the backup until the next update removes it.
-- getkirby.com only publishes the latest release per major version. With `allowMinor` set to `false`, no update is offered at all once a newer minor release exists, even if there are newer patch releases of your minor version.
 - GitHub archives have no published checksums, so the download is validated by structure and version only.
 
 ## License
