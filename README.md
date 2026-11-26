@@ -1,6 +1,6 @@
 # Kirby Updater
 
-Update the Kirby core of a manually installed (non-Composer) Kirby 5 site to the latest patch or minor release, right from the Panel.
+Update the Kirby core of a manually installed (non-Composer) Kirby 6 site to the latest patch or minor release, right from the Panel.
 
 ![Kirby Updater](.github/screenshot.png)
 
@@ -38,7 +38,8 @@ Major upgrades are never offered and stay a manual task. The update is refused f
 
 ## Requirements
 
-- Kirby 5
+- Kirby 6 (for Kirby 5, use [v1.1.1](https://github.com/devmount/kirby-updater/releases/tag/v1.1.1))
+- PHP 8.3 or newer
 - PHP `ZipArchive`
 - Write access of the web server user to the `kirby/` folder, its parent folder and the `site/` folder
 - `kirby/` and `site/` on the same filesystem

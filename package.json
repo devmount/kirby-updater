@@ -8,6 +8,6 @@
     "build": "kirbyup src/index.js"
   },
   "devDependencies": {
-    "kirbyup": "^3.5.0"
+    "kirbyup": "^4.0.0"
   }
 }
