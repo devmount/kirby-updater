@@ -56,26 +56,42 @@ class Updater
 			$blockers = [$e->getMessage()];
 		}
 
+		$backups = $this->backups();
+		$sizes   = array_map(
+			fn ($backup) => Dir::size($this->dir() . '/' . $backup['name']) ?: 0,
+			$backups
+		);
+		// path relative to the index root, absolute if the site folder lives elsewhere
+		$backups = array_map(
+			fn ($backup, $size) => [
+				...$backup,
+				'size' => F::niceSize($size),
+				'path' => ltrim(str_replace($this->kirby->root('index'), '', $this->dir() . '/' . $backup['name']), '/'),
+			],
+			$backups,
+			$sizes
+		);
+
+		$notices = $blockers;
+
+		if (in_array(false, array_column($backups, 'restorable'), true) === true) {
+			$notices[] = 'Backups of another major version can only be restored manually. You can delete them once the installed version works fine.';
+		}
+
 		// same items as in the security section of the system view
 		$issues = [
 			...$this->kirby->system()->updateStatus()?->messages() ?? [],
-			...array_map(fn ($blocker) => [
-				'text'  => $blocker,
+			...array_map(fn ($notice) => [
+				'text'  => $notice,
 				'icon'  => 'alert',
 				'theme' => 'notice',
-			], $blockers),
+			], $notices),
 		];
 
 		// support status of the current major version,
 		// only available if the update data could be loaded
 		$major   = explode('.', $this->kirby->version())[0];
 		$support = $this->data['versions'][$major . '.*'] ?? null;
-
-		$backups = $this->backups();
-		$size    = array_sum(array_map(
-			fn ($backup) => Dir::size($this->dir() . '/' . $backup['name']) ?: 0,
-			$backups
-		));
 
 		return [
 			'currentVersion' => $this->kirby->version(),
@@ -84,7 +100,7 @@ class Updater
 			'issues'         => $issues,
 			'changelog'      => $target ? 'https://getkirby.com/releases/' . $target : null,
 			'backups'        => $backups,
-			'backupSize'     => F::niceSize($size),
+			'backupSize'     => F::niceSize(array_sum($sizes)),
 			'support'        => $support ? [
 				'major'     => $major,
 				'status'    => $support['status'] ?? null,
@@ -245,9 +261,9 @@ class Updater
 	}
 
 	/**
-	 * Restores the most recent backup
+	 * Restores the given backup, only within the installed major version
 	 */
-	public function rollback(): array
+	public function rollback(string $name): array
 	{
 		$this->prepareRequest();
 		$this->acquireLock();
@@ -257,8 +273,12 @@ class Updater
 		$trash   = $this->dir() . '/trash';
 
 		try {
-			$backup = $this->backups()[0] ?? throw new Exception(message: 'There is no backup to restore');
+			$backup = $this->backup($name);
 			$path   = $this->dir() . '/' . $backup['name'];
+
+			if ($backup['restorable'] === false) {
+				throw new Exception(message: 'The backup ' . $backup['name'] . ' is not of Kirby ' . $this->major($current) . '. Backups of another major version can only be restored manually.');
+			}
 
 			Dir::remove($trash);
 
@@ -284,7 +304,31 @@ class Updater
 	}
 
 	/**
-	 * Existing backups, newest first
+	 * Deletes the given backup
+	 */
+	public function delete(string $name): array
+	{
+		$this->acquireLock();
+
+		try {
+			$backup = $this->backup($name);
+
+			if (Dir::remove($this->dir() . '/' . $backup['name']) === false) {
+				throw new Exception(message: 'Could not delete the backup ' . $backup['name']);
+			}
+		} finally {
+			$this->releaseLock();
+		}
+
+		return [
+			'backup'  => $backup['name'],
+			'version' => $backup['version'],
+		];
+	}
+
+	/**
+	 * Existing backups, newest first; only backups of the
+	 * installed major version can be restored
 	 */
 	public function backups(): array
 	{
@@ -292,10 +336,31 @@ class Updater
 		$dirs = preg_grep('/\/backup-\d{14}-[^\/]+$/', glob($this->dir() . '/backup-*', GLOB_ONLYDIR) ?: []);
 		rsort($dirs);
 
-		return array_map(fn ($dir) => [
-			'name'    => basename($dir),
-			'version' => $this->versionOf($dir),
-		], $dirs);
+		$major = $this->major($this->kirby->version());
+
+		return array_map(function ($dir) use ($major) {
+			$version = $this->versionOf($dir);
+
+			return [
+				'name'       => basename($dir),
+				'version'    => $version,
+				'restorable' => $version !== null && $this->major($version) === $major,
+			];
+		}, $dirs);
+	}
+
+	/**
+	 * Existing backup by its folder name
+	 */
+	protected function backup(string $name): array
+	{
+		foreach ($this->backups() as $backup) {
+			if ($backup['name'] === $name) {
+				return $backup;
+			}
+		}
+
+		throw new Exception(message: 'There is no backup ' . $name);
 	}
 
 	protected function download(string $version, string $file): void
@@ -469,6 +534,11 @@ class Updater
 	{
 		$composer = json_decode(F::read($dir . '/composer.json') ?: '', true);
 		return $composer['version'] ?? null;
+	}
+
+	protected function major(string $version): string
+	{
+		return explode('.', $version)[0];
 	}
 
 	protected function minor(string $version): string

@@ -44,7 +44,12 @@ App::plugin('devmount/kirby-updater', [
 			[
 				'pattern' => 'updater/rollback',
 				'method'  => 'POST',
-				'action'  => fn () => Updater::forAdmin()->rollback()
+				'action'  => fn () => Updater::forAdmin()->rollback((string)App::instance()->request()->get('name'))
+			],
+			[
+				'pattern' => 'updater/delete',
+				'method'  => 'POST',
+				'action'  => fn () => Updater::forAdmin()->delete((string)App::instance()->request()->get('name'))
 			]
 		]
 	]
