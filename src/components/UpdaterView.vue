@@ -13,23 +13,39 @@
 			<k-items :items="issueItems" />
 		</k-section>
 
-		<k-button-group class="k-updater-buttons">
+		<k-section v-if="backups.length" headline="Backups">
+			<k-table :columns="backupColumns" :rows="backups" :index="false" class="k-updater-backups">
+				<template #options="{ row }">
+					<k-button-group>
+						<k-button
+							:disabled="isBusy || !row.restorable"
+							icon="undo"
+							size="xs"
+							text="Restore"
+							variant="filled"
+							@click="rollback(row)"
+						/>
+						<k-button
+							:disabled="isBusy"
+							icon="trash"
+							size="xs"
+							text="Delete"
+							variant="filled"
+							@click="remove(row)"
+						/>
+					</k-button-group>
+				</template>
+			</k-table>
+		</k-section>
+
+		<k-button-group v-if="canUpdate" class="k-updater-buttons">
 			<k-button
-				v-if="canUpdate"
 				:disabled="isBusy"
 				:text="isBusy ? 'Working …' : 'Update to ' + targetVersion"
 				icon="refresh"
 				theme="positive"
 				variant="filled"
 				@click="update"
-			/>
-			<k-button
-				v-if="latestBackup"
-				:disabled="isBusy"
-				:text="'Restore backup (' + latestBackup.version + ')'"
-				icon="undo"
-				variant="filled"
-				@click="rollback"
 			/>
 		</k-button-group>
 	</k-panel-inside>
@@ -108,6 +124,13 @@ export default {
 
 			return this.latestBackup ? `Core backup of ${this.latestBackup.version}` : "No backup";
 		},
+		backupColumns() {
+			return {
+				version: { label: "Kirby version", mobile: true, width: "1/6" },
+				size: { label: "Size", mobile: true, width: "1/6" },
+				path: { label: "Path" }
+			};
+		},
 		// same item style as the security section of the system view
 		issueItems() {
 			return this.issues.map((issue) => ({
@@ -148,7 +171,7 @@ export default {
 			this.$helper.clipboard.write(info);
 			this.$panel.notification.success({ message: this.$t("system.info.copied") });
 		},
-		confirm(text, button, endpoint) {
+		confirm(text, button, endpoint, data) {
 			this.$panel.dialog.open({
 				component: "k-text-dialog",
 				props: {
@@ -157,33 +180,45 @@ export default {
 					submitButton: button
 				},
 				on: {
-					submit: () => this.run(endpoint)
+					submit: () => this.run(endpoint, data)
 				}
 			});
 		},
 		update() {
 			this.confirm(
-				`Update Kirby from <strong>${this.$esc(this.currentVersion)}</strong> to <strong>${this.$esc(this.targetVersion)}</strong>?A backup of the current kirby folder will be kept. Your content, site folder and plugins are not touched or backed up by the update.`,
+				`Update Kirby from <strong>${this.$esc(this.currentVersion)}</strong> to <strong>${this.$esc(this.targetVersion)}</strong>? A backup of the current kirby folder will be kept. Your content, site folder and plugins are not touched or backed up by the update.`,
 				{ text: "Update", icon: "refresh", theme: "positive" },
 				"updater/update"
 			);
 		},
-		rollback() {
+		rollback(backup) {
 			this.confirm(
-				`Restore the backup <strong>${this.$esc(this.latestBackup.name)}</strong> (Kirby ${this.$esc(this.latestBackup.version)})? The current kirby folder (Kirby ${this.$esc(this.currentVersion)}) will be deleted without a backup.`,
+				`Restore the backup <strong>${this.$esc(backup.name)}</strong> (Kirby ${this.$esc(backup.version)})? The current kirby folder (Kirby ${this.$esc(this.currentVersion)}) will be deleted without a backup.`,
 				{ text: "Restore", icon: "undo", theme: "negative" },
-				"updater/rollback"
+				"updater/rollback",
+				{ name: backup.name }
 			);
 		},
-		async run(endpoint) {
+		remove(backup) {
+			this.confirm(
+				`Delete the backup <strong>${this.$esc(backup.name)}</strong> (Kirby ${this.$esc(backup.version)})? This cannot be undone.`,
+				{ text: "Delete", icon: "trash", theme: "negative" },
+				"updater/delete",
+				{ name: backup.name }
+			);
+		},
+		async run(endpoint, data) {
 			this.$panel.dialog.close();
 			this.isBusy = true;
 
 			try {
-				const result = await this.$api.post(endpoint);
-				// reload to load the Panel assets of the new version,
-				// the message is shown after the reload (see mounted)
-				sessionStorage.setItem("kirby-updater", `Kirby is now on version ${result.newVersion}`);
+				const result = await this.$api.post(endpoint, data);
+				// reload to load the Panel assets of a new version and the
+				// current backups, the message is shown after the reload (see mounted)
+				sessionStorage.setItem(
+					"kirby-updater",
+					result.newVersion ? `Kirby is now on version ${result.newVersion}` : `Backup ${result.backup} deleted`
+				);
 				window.location.reload();
 			} catch (error) {
 				this.$panel.notification.error(error);
@@ -197,6 +232,16 @@ export default {
 <style>
 .k-updater-buttons {
 	margin-top: var(--spacing-6);
+}
+
+/* room for the inline restore and delete buttons */
+.k-updater-backups .k-table-options-column {
+	width: 12rem;
+	padding-inline: var(--spacing-2);
+}
+.k-updater-backups .k-table-options-column .k-button-group {
+	flex-wrap: nowrap;
+	justify-content: center;
 }
 
 /* colored labels like in the system view */
