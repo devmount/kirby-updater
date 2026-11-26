@@ -16,7 +16,7 @@ composer require devmount/kirby-updater
 
 Admins get an **Updater** entry in the Panel menu. Other users see neither the menu entry nor the view, and the update API is restricted to admins.
 
-The view shows the installed and latest version, the support status of the current major version and the latest backup, plus the known security issues and anything preventing an update.
+The view shows the installed and latest version, the support status of the current major version and the size of all backups, plus the known security issues and anything preventing an update. A table lists each backup with its Kirby version, size and path, and lets you restore or delete it.
 
 ## How it works
 
@@ -24,7 +24,8 @@ The view shows the installed and latest version, the support status of the curre
 2. Only then is the current `kirby/` folder moved to `site/kirby-updater/backup-<timestamp>-<version>/` and the new folder moved in place.
 3. If anything fails after the swap, the backup is moved back automatically.
 4. After a successful update, the Panel reloads with the new version and confirms the update. Older backups are removed, keeping as many as set by the `backups` option.
-5. The latest backup can be restored manually from the Updater view. This deletes the current `kirby/` folder without a backup.
+5. Any backup of the installed major version can be restored from the backup table. This deletes the current `kirby/` folder without a backup.
+6. Backups of another major version, e.g. Kirby 5 backups after a manual upgrade to Kirby 6, can't be restored from the Panel, since the Updater view only works with the major version it's built for. They are kept as a manual fallback until you delete them or the next update removes them.
 
 **Only the `kirby/` folder (the Kirby core) is backed up and replaced. Content, the `site/` folder (including plugins and accounts) and `media/` are neither touched nor backed up, so keep your regular site backups.**
 
@@ -63,7 +64,7 @@ return [
 
 ## Limitations
 
-- Plugins may be incompatible with a new minor release. Use "Restore backup" in that case.
+- Plugins may be incompatible with a new minor release. Restore the previous backup from the backup table in that case.
 - Any changes made inside the `kirby/` folder are replaced by the update. They only survive in the backup until the next update removes it.
 - GitHub archives have no published checksums, so the download is validated by structure and version only.
 
