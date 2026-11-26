@@ -19,6 +19,7 @@
 					<k-button-group>
 						<k-button
 							:disabled="isBusy || !row.restorable"
+							:title="row.restorable ? null : 'Backups of another major version can\'t be restored from the Panel'"
 							icon="undo"
 							size="xs"
 							text="Restore"
