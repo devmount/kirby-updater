@@ -2,7 +2,7 @@
   "name": "devmount/kirby-updater",
   "description": "Update the Kirby core to the latest patch or minor release from the Panel",
   "type": "kirby-plugin",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "homepage": "https://github.com/devmount/kirby-updater",
   "license": "MIT",
   "authors": [
