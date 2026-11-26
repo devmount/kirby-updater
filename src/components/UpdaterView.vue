@@ -152,7 +152,8 @@ export default {
 			this.$panel.dialog.open({
 				component: "k-text-dialog",
 				props: {
-					text: text,
+					// Kirby 6 escapes plain strings, so mark the text as HTML
+					text: this.$panel.html(text),
 					submitButton: button
 				},
 				on: {
@@ -162,14 +163,14 @@ export default {
 		},
 		update() {
 			this.confirm(
-				`Update Kirby from <strong>${this.currentVersion}</strong> to <strong>${this.targetVersion}</strong>? A backup of the current kirby folder will be kept. Your content, site folder and plugins are not touched or backed up by the update.`,
+				`Update Kirby from <strong>${this.$esc(this.currentVersion)}</strong> to <strong>${this.$esc(this.targetVersion)}</strong>?A backup of the current kirby folder will be kept. Your content, site folder and plugins are not touched or backed up by the update.`,
 				{ text: "Update", icon: "refresh", theme: "positive" },
 				"updater/update"
 			);
 		},
 		rollback() {
 			this.confirm(
-				`Restore the backup <strong>${this.latestBackup.name}</strong> (Kirby ${this.latestBackup.version})? The current kirby folder (Kirby ${this.currentVersion}) will be deleted without a backup.`,
+				`Restore the backup <strong>${this.$esc(this.latestBackup.name)}</strong> (Kirby ${this.$esc(this.latestBackup.version)})? The current kirby folder (Kirby ${this.$esc(this.currentVersion)}) will be deleted without a backup.`,
 				{ text: "Restore", icon: "undo", theme: "negative" },
 				"updater/rollback"
 			);
